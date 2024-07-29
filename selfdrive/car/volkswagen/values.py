@@ -198,6 +198,9 @@ class VWCarDocs(CarDocs):
     if CP.carFingerprint in (CAR.VOLKSWAGEN_CRAFTER_MK2, CAR.VOLKSWAGEN_TRANSPORTER_T61):
       self.car_parts = CarParts([Device.threex_angled_mount, CarHarness.vw_j533])
 
+    if CP.carFingerprint in (CAR.SKODA_OCTAVIA_MK4):
+      self.car_parts = CarParts([CarHarness.vw_mfk30])
+
     if abs(CP.minSteerSpeed - CarControllerParams.DEFAULT_MIN_STEER_SPEED) < 1e-3:
       self.min_steer_speed = 0
 
@@ -421,6 +424,14 @@ class CAR(Platforms):
       VWCarDocs("Škoda Octavia Scout 2017-19"),
     ],
     VolkswagenCarSpecs(mass=1388, wheelbase=2.68),
+    chassis_codes={"NE"},
+    wmis={WMI.SKODA},
+  )
+  SKODA_OCTAVIA_MK4 = VolkswagenMQBPlatformConfig(
+    [
+      VWCarDocs("Škoda Octavia 2023"),
+    ],
+    VolkswagenCarSpecs(mass=1836, wheelbase=2.70),
     chassis_codes={"NE"},
     wmis={WMI.SKODA},
   )
