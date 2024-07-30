@@ -16,6 +16,7 @@ from openpilot.selfdrive.car import DT_CTRL, gen_empty_fingerprint
 from openpilot.selfdrive.car.fingerprints import all_known_cars, MIGRATION
 from openpilot.selfdrive.car.car_helpers import FRAME_FINGERPRINT, interfaces
 from openpilot.selfdrive.car.honda.values import CAR as HONDA, HondaFlags
+from openpilot.selfdrive.car.toyota.values import ANGLE_CONTROL_CAR as TOYOTA_ANGLE_CONTROL_CAR
 from openpilot.selfdrive.car.tests.routes import non_tested_cars, routes, CarTestRoute
 from openpilot.selfdrive.car.values import Platform
 from openpilot.selfdrive.car.card import Car
@@ -23,8 +24,11 @@ from openpilot.selfdrive.test.helpers import read_segment_list
 from openpilot.system.hardware.hw import DEFAULT_DOWNLOAD_CACHE_ROOT
 from openpilot.tools.lib.logreader import LogReader, internal_source, openpilotci_source
 from openpilot.tools.lib.route import SegmentName
+from openpilot.selfdrive.test.fuzzy_generation import FuzzyGenerator
 
 from panda.tests.libpanda import libpanda_py
+from panda.tests.safety.common import VEHICLE_SPEED_FACTOR
+
 
 EventName = car.CarEvent.EventName
 PandaType = log.PandaState.PandaType
@@ -193,6 +197,8 @@ class TestCarModelBase(unittest.TestCase):
     self.assertEqual(0, set_status, f"failed to set safetyModel {cfg}")
     self.safety.init_tests()
 
+    self.tx_fuzzy_ts_nanos = 0
+
   def test_car_params(self):
     if self.CP.dashcamOnly:
       self.skipTest("no need to check carParams for dashcamOnly")
@@ -323,10 +329,13 @@ class TestCarModelBase(unittest.TestCase):
   @settings(max_examples=MAX_EXAMPLES, deadline=None,
             phases=(Phase.reuse, Phase.generate, Phase.shrink))
   @given(data=st.data())
-  def test_panda_safety_carstate_fuzzy(self, data):
+  def test_panda_safety_carstate_tx_fuzzy(self, data):
     """
       For each example, pick a random CAN message on the bus and fuzz its data,
       checking for panda state mismatches.
+
+      Also, we randomize a CarControl message, and set it up to be consistent with the
+      current carstate and check for logic mismatches between OP carcontrollers and panda
     """
 
     if self.CP.dashcamOnly:
@@ -340,6 +349,8 @@ class TestCarModelBase(unittest.TestCase):
 
     CC = car.CarControl.new_message()
 
+    cc_msg = FuzzyGenerator.get_random_msg(data.draw, car.CarControl, real_floats=True)
+
     for dat in msgs:
       # due to panda updating state selectively, only edges are expected to match
       # TODO: warm up CarState with real CAN messages to check edge of both sources
@@ -351,13 +362,24 @@ class TestCarModelBase(unittest.TestCase):
       prev_panda_cruise_engaged = self.safety.get_cruise_engaged_prev()
       prev_panda_acc_main_on = self.safety.get_acc_main_on()
 
+      # Make sure dat has initializing bit if steering sensor is ready
+      if self.CP.carFingerprint in TOYOTA_ANGLE_CONTROL_CAR and self.CI.CS.accurate_steer_angle_seen:
+        dat = bytearray(dat)
+        dat[0] |= 8
+        dat = bytes(dat)
+
       to_send = libpanda_py.make_CANPacket(address, bus, dat)
       self.safety.safety_rx_hook(to_send)
 
       can = messaging.new_message('can', 1)
       can.can = [log.CanData(address=address, dat=dat, src=bus)]
-
       CS = self.CI.update(CC, (can.to_bytes(),))
+
+      # panda doesn't register angle if steering sensor isn't yet initialized -> set steeringAngleDeg to 0
+      if self.CP.carFingerprint in TOYOTA_ANGLE_CONTROL_CAR and not self.CI.CS.accurate_steer_angle_seen:
+        cs_msg = self.CI.CS.out.to_dict()
+        cs_msg["steeringAngleDeg"] = 0
+        self.CI.CS.out = car.CarState.new_message(**cs_msg).as_reader()
 
       if self.safety.get_gas_pressed_prev() != prev_panda_gas:
         self.assertEqual(CS.gasPressed, self.safety.get_gas_pressed_prev())
@@ -384,6 +406,60 @@ class TestCarModelBase(unittest.TestCase):
       if self.CP.carName == "honda":
         if self.safety.get_acc_main_on() != prev_panda_acc_main_on:
           self.assertEqual(CS.cruiseState.available, self.safety.get_acc_main_on())
+
+    if self.CP.notCar:
+      self.skipTest("no need to check safety tx hooks for notCar")
+
+    def set_controls_allowed(status):
+      self.safety.set_controls_allowed(status)
+      self.safety.set_cruise_engaged_prev(status)
+
+    # check for controls_allowed and set True if not already in these cases:
+    # - cancel button messages before controls_allowed
+    # - actuator commands before controls_allowed
+    # - resume button message before controls_allowed
+    controls_state = any([cc_msg["enabled"], cc_msg["latActive"], cc_msg["longActive"]])
+    panda_controls_allowed = any([controls_state, cc_msg["cruiseControl"]["resume"], cc_msg["cruiseControl"]["cancel"]])
+    set_controls_allowed(panda_controls_allowed)
+
+    # relay_malfunction might be set during randomizing carState
+    if self.safety.get_relay_malfunction():
+      self.safety.set_relay_malfunction(False)
+
+    # Nissan calculate vEgoRaw with avg speed of 4 wheels
+    # while panda get vehicle_speed from rear wheels only,
+    # so there might be a big enough difference between the two
+    if self.CP.carName == "nissan":
+      panda_vehicle_speed_last = self.safety.get_vehicle_speed_last() / VEHICLE_SPEED_FACTOR
+      if abs(self.CI.CS.out.vEgoRaw - panda_vehicle_speed_last) > 0.2:
+        cs_msg = self.CI.CS.out.to_dict()
+        cs_msg["vEgoRaw"] = panda_vehicle_speed_last
+        self.CI.CS.out = car.CarState.new_message(**cs_msg).as_reader()
+
+    # no long controls if gas_pressed_prev
+    if self.safety.get_gas_pressed_prev():
+      cc_msg["longActive"] = False
+      cc_msg["enabled"] = False
+
+    if cc_msg["longActive"]:
+      cc_msg["enabled"] = True
+    else:
+      # follow logic of LoC in controlsd to set accel to 0 if longActive is False
+      cc_msg["actuators"]["accel"] = 0
+
+    if self.CP.carName == "honda" and self.safety.get_honda_fwd_brake():
+      self.safety.set_honda_fwd_brake(False)
+
+    CC = car.CarControl.new_message(**cc_msg).as_reader()
+
+    self.safety.set_timer(int(self.tx_fuzzy_ts_nanos / 1e3))
+    new_actuators, sendcans = self.CI.apply(CC, self.tx_fuzzy_ts_nanos)
+    new_actuators = new_actuators.as_reader()
+    self.tx_fuzzy_ts_nanos += DT_CTRL * 1e9
+
+    for addr, _, dat, bus in sendcans:
+      to_send = libpanda_py.make_CANPacket(addr, bus % 4, dat)
+      self.assertTrue(self.safety.safety_tx_hook(to_send), (addr, dat, bus))
 
   def test_panda_safety_carstate(self):
     """
