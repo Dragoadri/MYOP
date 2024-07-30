@@ -69,6 +69,15 @@ TogglesPanel::TogglesPanel(SettingsWindow *parent) : ListWidget(parent) {
       tr("Display speed in km/h instead of mph."),
       "../assets/offroad/icon_metric.png",
     },
+    //----------------------------------------------------------------------ADRIAN CAÑADAS GALLARDO INI
+    {
+      "ActivateEvent",
+      tr("Activa el evento (SICUEM)"),
+      tr("Activar evento a mostrar"),
+      "../assets/offroad/alerta.png",
+    },
+    //----------------------------------------------------------------------ADRIAN CAÑADAS GALLARDO FIN
+
   };
 
 
