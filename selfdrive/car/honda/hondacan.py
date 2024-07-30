@@ -42,8 +42,16 @@ def get_lkas_cmd_bus(CAN, car_fingerprint, radar_disabled=False):
 
 
 def get_cruise_speed_conversion(car_fingerprint: str, is_metric: bool) -> float:
+  if is_metric:
+    return CV.KPH_TO_MS
+
   # on certain cars, CRUISE_SPEED changes to imperial with car's unit setting
-  return CV.MPH_TO_MS if car_fingerprint in HONDA_BOSCH_RADARLESS and not is_metric else CV.KPH_TO_MS
+  if car_fingerprint in HONDA_BOSCH_RADARLESS:
+    return CV.MPH_TO_MS
+
+  # for other cars, CRUISE_SPEED is always kph and the vehicle converts to mph using a conversion
+  # value rounded to 1 decimal place (without this the value would be off by 0.5 mph at 85 mph)
+  return 1 / round(CV.MPH_TO_KPH, 1) * CV.MPH_TO_MS
 
 
 def create_brake_command(packer, CAN, apply_brake, pump_on, pcm_override, pcm_cancel_cmd, fcw, car_fingerprint, stock_brake):
