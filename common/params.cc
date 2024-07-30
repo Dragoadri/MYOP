@@ -141,6 +141,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"IsEngaged", PERSISTENT},
     {"IsLdwEnabled", PERSISTENT},
     {"IsMetric", PERSISTENT},
+    {"ActivateEvent",PERSISTENT},//Adrian Cañadas Gallardo
     {"IsOffroad", CLEAR_ON_MANAGER_START},
     {"IsOnroad", PERSISTENT},
     {"IsRhdDetected", PERSISTENT},
