@@ -214,6 +214,9 @@ static void update_state(UIState *s) {
 void ui_update_params(UIState *s) {
   auto params = Params();
   s->scene.is_metric = params.getBool("IsMetric");
+  //Adrian Cañadas Gallardo
+  s->scene.is_activateEvent = params.getBool("ActivateEvent");
+
 }
 
 void UIState::updateStatus() {
