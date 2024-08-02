@@ -5,9 +5,13 @@
 #include <algorithm>
 #include <cmath>
 
+
 #include "common/swaglog.h"
 #include "selfdrive/ui/qt/onroad/buttons.h"
 #include "selfdrive/ui/qt/util.h"
+
+//Adrian Cañadas Gallardo
+float v_egoo=0;
 
 // Window that shows camera view and variety of info drawn on top
 AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* parent) : fps_filter(UI_FREQ, 3, 1. / UI_FREQ), CameraWidget("camerad", type, true, parent) {
@@ -47,6 +51,10 @@ void AnnotatedCameraWidget::updateState(const UIState &s) {
   // Handle older routes where vEgoCluster is not set
   v_ego_cluster_seen = v_ego_cluster_seen || car_state.getVEgoCluster() != 0.0;
   float v_ego = v_ego_cluster_seen ? car_state.getVEgoCluster() : car_state.getVEgo();
+
+    //Adrian Cañadas Gallardo
+    v_egoo = v_ego;
+
   speed = cs_alive ? std::max<float>(0.0, v_ego) : 0.0;
   speed *= is_metric ? MS_TO_KPH : MS_TO_MPH;
 
@@ -76,6 +84,10 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
 
   QString speedStr = QString::number(std::nearbyint(speed));
   QString setSpeedStr = is_cruise_set ? QString::number(std::nearbyint(setSpeed)) : "-";
+    //Adrian Cañadas Gallardo
+
+
+  QString v_egoStr =  QString::number(std::nearbyint(v_egoo));
 
 
 
@@ -131,7 +143,9 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   p.drawText(set_speed_rect2.adjusted(0, 27, 0, 0), Qt::AlignHCenter | Qt::AlignHCenter, tr("SICUEM"));
   p.setFont(InterFont(90, QFont::Bold));
   p.setPen(set_speed_color);
-  p.drawText(set_speed_rect2.adjusted(0, 67, 0, 0), Qt::AlignHCenter | Qt::AlignHCenter, speedStr);
+
+  //V_EGO ES LA VELOCIDAD REAL
+  p.drawText(set_speed_rect2.adjusted(0, 67, 0, 0), Qt::AlignHCenter | Qt::AlignHCenter, v_egoStr);
     p.setFont(InterFont(20, QFont::Bold));
 
   p.drawText(set_speed_rect2.adjusted(0, 170, 0, 0), Qt::AlignHCenter | Qt::AlignHCenter, speedUnit);
@@ -145,6 +159,7 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   p.setFont(InterFont(66));
   drawText(p, rect().center().x(), 290, speedUnit, 200);
 
+
 }
 
   //Adrian Cañadas Gallardo
@@ -153,6 +168,8 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
 
   p.restore();
 }
+
+
 
 
 
