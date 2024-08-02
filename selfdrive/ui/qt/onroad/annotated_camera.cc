@@ -11,7 +11,10 @@
 #include "selfdrive/ui/qt/util.h"
 
 //Adrian Cañadas Gallardo
+#include <QPixmap>
+#include <QRect>
 float v_egoo=0;
+float a_egoo=0;
 
 // Window that shows camera view and variety of info drawn on top
 AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* parent) : fps_filter(UI_FREQ, 3, 1. / UI_FREQ), CameraWidget("camerad", type, true, parent) {
@@ -51,9 +54,12 @@ void AnnotatedCameraWidget::updateState(const UIState &s) {
   // Handle older routes where vEgoCluster is not set
   v_ego_cluster_seen = v_ego_cluster_seen || car_state.getVEgoCluster() != 0.0;
   float v_ego = v_ego_cluster_seen ? car_state.getVEgoCluster() : car_state.getVEgo();
+  float a_ego = car_state.getAEgo();
 
     //Adrian Cañadas Gallardo
     v_egoo = v_ego;
+    a_egoo = a_ego;
+
 
   speed = cs_alive ? std::max<float>(0.0, v_ego) : 0.0;
   speed *= is_metric ? MS_TO_KPH : MS_TO_MPH;
@@ -77,17 +83,20 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   p.save();
 
   // Header gradient
-  QLinearGradient bg(0, UI_HEADER_HEIGHT - (UI_HEADER_HEIGHT / 2.5), 0, UI_HEADER_HEIGHT);
+
+//Adrian Cañadas Gallardo
+ if(is_activateEvent){
+   QLinearGradient bg(0, UI_HEADER_HEIGHT - (UI_HEADER_HEIGHT / 2.5), 0, UI_HEADER_HEIGHT);
   bg.setColorAt(0, QColor::fromRgbF(0, 0, 0, 0.45));
   bg.setColorAt(1, QColor::fromRgbF(0, 0, 0, 0));
   p.fillRect(0, 0, width(), UI_HEADER_HEIGHT, bg);
 
-  QString speedStr = QString::number(std::nearbyint(speed));
+  QString speedStr = is_cruise_set ? QString::number(std::nearbyint(speed)) : "-";
   QString setSpeedStr = is_cruise_set ? QString::number(std::nearbyint(setSpeed)) : "-";
-    //Adrian Cañadas Gallardo
 
-
-  QString v_egoStr =  QString::number(std::nearbyint(v_egoo));
+//Adrian Cañadas Gallardo
+  QString v_egoStr =  is_cruise_set ? QString::number(std::nearbyint(v_egoo)) : "-";
+    QString acelStr =  is_cruise_set ? QString::number(std::nearbyint(a_egoo)) : "-";
 
 
 
@@ -102,7 +111,7 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
  // Definir colores
 QColor max_color = QColor(0x80, 0xd8, 0xa6, 0xff);
 QColor set_speed_color = whiteColor();
-QColor label_color = whiteColor(); // Color para las etiquetas
+//QColor label_color = whiteColor(); // Color para las etiquetas
 
 // Configurar colores basados en el estado del crucero
 if (is_cruise_set) {
@@ -110,6 +119,7 @@ if (is_cruise_set) {
         max_color = whiteColor();
     } else if (status == STATUS_OVERRIDE) {
         max_color = QColor(0x91, 0x9b, 0x95, 0xff);
+
     }
 } else {
     max_color = QColor(0xa6, 0xa6, 0xa6, 0xff);
@@ -121,12 +131,18 @@ QFont labelFont("Inter", 7, QFont::DemiBold); // Tamaño más pequeño para etiq
 QFont valueFont("Inter", 7, QFont::Bold); // Tamaño más pequeño para valores
 
 // Establecer posiciones y ajustar el rectángulo
-int yOffset = -300; // Ajusta el margen superior
-int yIncrement = 100; // Espaciado entre líneas
+
+
 
 // Ajustar el rectángulo negro (o fondo) para cada texto
-int rectWidth = 500; // Ajustar el ancho del rectángulo según sea necesario
-int rectHeight = 500; // Ajustar la altura del rectángulo según sea necesario
+int rectWidth = 100; // Ajustar el ancho del rectángulo según sea necesario
+int rectHeight = 600; // Ajustar la altura del rectángulo según sea necesario
+
+int xOffset = 100-rectWidth; // Ajusta el margen izquierdo
+//int xIncrement = 100; // Espaciado entre columnas
+
+int yOffset = 100-rectHeight; // Ajusta el margen superior
+int yIncrement = 100; // Espaciado entre líneas
 
 QRect set_speed_rect(QPoint(60, 45), QSize(rectWidth, rectHeight));
 
@@ -138,83 +154,72 @@ p.drawRoundedRect(set_speed_rect, 32, 32);
 // Configurar fuente y dibujar textos
 p.setFont(labelFont);
 
+// DIBUJAR SICUEM
+
+
+// DIBUJAR SICUEM
+QRect text_rect = set_speed_rect.adjusted(xOffset, yOffset -20, 0, 0);
+//Color rojo
+p.setPen(QColor(255, 0, 0, 255));
+p.setFont(labelFont);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, tr("SICUEM"));
+
+// Cargar la imagen
+QPixmap imagen("../assets/offroad/alerta.png"); // Cambia la ruta a la ubicación de tu imagen
+
+// Obtener el tamaño de la imagen
+int imagenAncho = imagen.width();
+int imagenAlto = imagen.height();
+
+// Definir la posición para dibujar la imagen debajo del texto
+QRect imagen_rect = QRect(xOffset+85, yOffset*2+text_rect.height() - 10, imagenAncho/3.25, imagenAlto/3.25); // Ajusta el 10 para el espacio entre el texto y la imagen
+
+// Dibujar la imagen
+p.drawPixmap(imagen_rect, imagen);
+
 // MAX
-QRect text_rect = set_speed_rect.adjusted(yOffset, 0, 0, 0);
+text_rect = set_speed_rect.adjusted(xOffset, yOffset + 2 * yIncrement, 0, 0);
 p.setPen(max_color);
 p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, tr("MAX"));
 
+// Set Speed
 p.setFont(valueFont);
 p.setPen(set_speed_color);
-text_rect = set_speed_rect.adjusted( yOffset + yIncrement,0, 0, 0);
+text_rect = set_speed_rect.adjusted(xOffset, yOffset + 3 * yIncrement, 0, 0);
 p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, setSpeedStr);
 
 // Veloc d
 p.setFont(labelFont);
-p.setPen(label_color);
-text_rect = set_speed_rect.adjusted(0, yOffset + 2 * yIncrement, 0, 0);
-p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, tr("Veloc d"));
+p.setPen(max_color);
+text_rect = set_speed_rect.adjusted(xOffset, yOffset + 4 * yIncrement, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, tr("Vel. MAX"));
 
 p.setFont(valueFont);
 p.setPen(set_speed_color);
-text_rect = set_speed_rect.adjusted(0, yOffset + 3 * yIncrement, 0, 0);
-p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, "veldStr");
+text_rect = set_speed_rect.adjusted(xOffset, yOffset + 5 * yIncrement, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, speedStr + " " + speedUnit);
 
 // Veloc r
 p.setFont(labelFont);
-p.setPen(label_color);
-text_rect = set_speed_rect.adjusted(0, yOffset + 4 * yIncrement, 0, 0);
-p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, tr("Veloc r"));
+p.setPen(max_color);
+text_rect = set_speed_rect.adjusted(xOffset, yOffset + 6 * yIncrement, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, tr("Vel REAL"));
 
 p.setFont(valueFont);
 p.setPen(set_speed_color);
-text_rect = set_speed_rect.adjusted(0, yOffset + 5 * yIncrement, 0, 0);
-p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, "velrStr");
+text_rect = set_speed_rect.adjusted(xOffset, yOffset + 7 * yIncrement, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, v_egoStr + " " + speedUnit);
 
 // acel
 p.setFont(labelFont);
-p.setPen(label_color);
-text_rect = set_speed_rect.adjusted(0, yOffset + 6 * yIncrement, 0, 0);
-p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, tr("acel"));
+p.setPen(max_color);
+text_rect = set_speed_rect.adjusted(xOffset, yOffset + 8 * yIncrement, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, tr("Acel."));
 
 p.setFont(valueFont);
 p.setPen(set_speed_color);
-text_rect = set_speed_rect.adjusted(0, yOffset + 7 * yIncrement, 0, 0);
-p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, "acelStr");
-
-//Adrian Cañadas Gallardo
- if(is_activateEvent){
-   const QSize default_size2 = {200, 224};
-   QSize set_speed_size2 = default_size2;
-
-
- //Adrian Cañadas Gallardo
-  QRect set_speed_rect2(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, 300), set_speed_size2);
-  p.setPen(QPen(whiteColor(75), 6));
-  p.setBrush(blackColor(166));
-  p.drawRoundedRect(set_speed_rect2, 32, 32);
-
-  p.setFont(InterFont(40, QFont::DemiBold));
-  p.setPen(max_color);
-  p.drawText(set_speed_rect2.adjusted(0, 27, 0, 0), Qt::AlignHCenter | Qt::AlignHCenter, tr("SICUEM"));
-  p.setFont(InterFont(90, QFont::Bold));
-  p.setPen(set_speed_color);
-
-  //V_EGO ES LA VELOCIDAD REAL
-  p.drawText(set_speed_rect2.adjusted(0, 67, 0, 0), Qt::AlignHCenter | Qt::AlignHCenter, v_egoStr);
-    p.setFont(InterFont(20, QFont::Bold));
-
-  p.drawText(set_speed_rect2.adjusted(0, 170, 0, 0), Qt::AlignHCenter | Qt::AlignHCenter, speedUnit);
-
-  p.setFont(InterFont(90, QFont::Bold));
-  p.setPen(set_speed_color);
-
-  // current speed
-  p.setFont(InterFont(176, QFont::Bold));
-  drawText(p, rect().center().x(), 210, speedStr);
-  p.setFont(InterFont(66));
-  drawText(p, rect().center().x(), 290, speedUnit, 200);
-
-
+text_rect = set_speed_rect.adjusted(xOffset, yOffset + 9 * yIncrement, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, acelStr + " m/s²");
 }
 
   //Adrian Cañadas Gallardo
