@@ -95,42 +95,97 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
 
   // Draw outer box + border to contain set speed
   const QSize default_size = {172, 204};
-  const QSize default_size2 = {200, 224};
   QSize set_speed_size = default_size;
-  QSize set_speed_size2 = default_size2;
 
   if (is_metric) set_speed_size.rwidth() = 200;
 
-  QRect set_speed_rect(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, 45), set_speed_size);
-  p.setPen(QPen(whiteColor(75), 6));
-  p.setBrush(blackColor(166));
-  p.drawRoundedRect(set_speed_rect, 32, 32);
+ // Definir colores
+QColor max_color = QColor(0x80, 0xd8, 0xa6, 0xff);
+QColor set_speed_color = whiteColor();
+QColor label_color = whiteColor(); // Color para las etiquetas
 
-
-
-
-  // Draw MAX
-  QColor max_color = QColor(0x80, 0xd8, 0xa6, 0xff);
-  QColor set_speed_color = whiteColor();
-  if (is_cruise_set) {
+// Configurar colores basados en el estado del crucero
+if (is_cruise_set) {
     if (status == STATUS_DISENGAGED) {
-      max_color = whiteColor();
+        max_color = whiteColor();
     } else if (status == STATUS_OVERRIDE) {
-      max_color = QColor(0x91, 0x9b, 0x95, 0xff);
+        max_color = QColor(0x91, 0x9b, 0x95, 0xff);
     }
-  } else {
+} else {
     max_color = QColor(0xa6, 0xa6, 0xa6, 0xff);
     set_speed_color = QColor(0x72, 0x72, 0x72, 0xff);
-  }
-  p.setFont(InterFont(40, QFont::DemiBold));
-  p.setPen(max_color);
-  p.drawText(set_speed_rect.adjusted(0, 27, 0, 0), Qt::AlignHCenter | Qt::AlignHCenter, tr("MAX"));
-  p.setFont(InterFont(90, QFont::Bold));
-  p.setPen(set_speed_color);
-  p.drawText(set_speed_rect.adjusted(0, 77, 0, 0), Qt::AlignHCenter | Qt::AlignHCenter, setSpeedStr);
+}
+
+// Configurar fuente para las etiquetas y valores
+QFont labelFont("Inter", 7, QFont::DemiBold); // Tamaño más pequeño para etiquetas
+QFont valueFont("Inter", 7, QFont::Bold); // Tamaño más pequeño para valores
+
+// Establecer posiciones y ajustar el rectángulo
+int yOffset = -300; // Ajusta el margen superior
+int yIncrement = 100; // Espaciado entre líneas
+
+// Ajustar el rectángulo negro (o fondo) para cada texto
+int rectWidth = 500; // Ajustar el ancho del rectángulo según sea necesario
+int rectHeight = 500; // Ajustar la altura del rectángulo según sea necesario
+
+QRect set_speed_rect(QPoint(60, 45), QSize(rectWidth, rectHeight));
+
+// Dibujar el rectángulo negro de fondo
+p.setPen(QPen(whiteColor(75), 6));
+p.setBrush(blackColor(166));
+p.drawRoundedRect(set_speed_rect, 32, 32);
+
+// Configurar fuente y dibujar textos
+p.setFont(labelFont);
+
+// MAX
+QRect text_rect = set_speed_rect.adjusted(yOffset, 0, 0, 0);
+p.setPen(max_color);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, tr("MAX"));
+
+p.setFont(valueFont);
+p.setPen(set_speed_color);
+text_rect = set_speed_rect.adjusted( yOffset + yIncrement,0, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, setSpeedStr);
+
+// Veloc d
+p.setFont(labelFont);
+p.setPen(label_color);
+text_rect = set_speed_rect.adjusted(0, yOffset + 2 * yIncrement, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, tr("Veloc d"));
+
+p.setFont(valueFont);
+p.setPen(set_speed_color);
+text_rect = set_speed_rect.adjusted(0, yOffset + 3 * yIncrement, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, "veldStr");
+
+// Veloc r
+p.setFont(labelFont);
+p.setPen(label_color);
+text_rect = set_speed_rect.adjusted(0, yOffset + 4 * yIncrement, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, tr("Veloc r"));
+
+p.setFont(valueFont);
+p.setPen(set_speed_color);
+text_rect = set_speed_rect.adjusted(0, yOffset + 5 * yIncrement, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, "velrStr");
+
+// acel
+p.setFont(labelFont);
+p.setPen(label_color);
+text_rect = set_speed_rect.adjusted(0, yOffset + 6 * yIncrement, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, tr("acel"));
+
+p.setFont(valueFont);
+p.setPen(set_speed_color);
+text_rect = set_speed_rect.adjusted(0, yOffset + 7 * yIncrement, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, "acelStr");
 
 //Adrian Cañadas Gallardo
  if(is_activateEvent){
+   const QSize default_size2 = {200, 224};
+   QSize set_speed_size2 = default_size2;
+
 
  //Adrian Cañadas Gallardo
   QRect set_speed_rect2(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, 300), set_speed_size2);
