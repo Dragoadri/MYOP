@@ -33,6 +33,9 @@ void AnnotatedCameraWidget::updateState(const UIState &s) {
 
   is_metric = s.scene.is_metric;
 
+  //Adrian Cañadas Gallardo
+  is_activateEvent = s.scene.is_activateEvent;
+
   // Handle older routes where vCruiseCluster is not set
   float v_cruise = cs.getVCruiseCluster() == 0.0 ? cs.getVCruise() : cs.getVCruiseCluster();
   setSpeed = cs_alive ? v_cruise : SET_SPEED_NA;
@@ -72,17 +75,27 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   p.fillRect(0, 0, width(), UI_HEADER_HEIGHT, bg);
 
   QString speedStr = QString::number(std::nearbyint(speed));
-  QString setSpeedStr = is_cruise_set ? QString::number(std::nearbyint(setSpeed)) : "–";
+  QString setSpeedStr = is_cruise_set ? QString::number(std::nearbyint(setSpeed)) : "-";
+
+
+
+  //Adrian Cañadas Gallardo MAX velocidad
 
   // Draw outer box + border to contain set speed
   const QSize default_size = {172, 204};
+  const QSize default_size2 = {200, 224};
   QSize set_speed_size = default_size;
+  QSize set_speed_size2 = default_size2;
+
   if (is_metric) set_speed_size.rwidth() = 200;
 
   QRect set_speed_rect(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, 45), set_speed_size);
   p.setPen(QPen(whiteColor(75), 6));
   p.setBrush(blackColor(166));
   p.drawRoundedRect(set_speed_rect, 32, 32);
+
+
+
 
   // Draw MAX
   QColor max_color = QColor(0x80, 0xd8, 0xa6, 0xff);
@@ -99,10 +112,32 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   }
   p.setFont(InterFont(40, QFont::DemiBold));
   p.setPen(max_color);
-  p.drawText(set_speed_rect.adjusted(0, 27, 0, 0), Qt::AlignTop | Qt::AlignHCenter, tr("MAX"));
+  p.drawText(set_speed_rect.adjusted(0, 27, 0, 0), Qt::AlignHCenter | Qt::AlignHCenter, tr("MAX"));
   p.setFont(InterFont(90, QFont::Bold));
   p.setPen(set_speed_color);
-  p.drawText(set_speed_rect.adjusted(0, 77, 0, 0), Qt::AlignTop | Qt::AlignHCenter, setSpeedStr);
+  p.drawText(set_speed_rect.adjusted(0, 77, 0, 0), Qt::AlignHCenter | Qt::AlignHCenter, setSpeedStr);
+
+//Adrian Cañadas Gallardo
+ if(is_activateEvent){
+
+ //Adrian Cañadas Gallardo
+  QRect set_speed_rect2(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, 300), set_speed_size2);
+  p.setPen(QPen(whiteColor(75), 6));
+  p.setBrush(blackColor(166));
+  p.drawRoundedRect(set_speed_rect2, 32, 32);
+
+  p.setFont(InterFont(40, QFont::DemiBold));
+  p.setPen(max_color);
+  p.drawText(set_speed_rect2.adjusted(0, 27, 0, 0), Qt::AlignHCenter | Qt::AlignHCenter, tr("SICUEM"));
+  p.setFont(InterFont(90, QFont::Bold));
+  p.setPen(set_speed_color);
+  p.drawText(set_speed_rect2.adjusted(0, 67, 0, 0), Qt::AlignHCenter | Qt::AlignHCenter, speedStr);
+    p.setFont(InterFont(20, QFont::Bold));
+
+  p.drawText(set_speed_rect2.adjusted(0, 170, 0, 0), Qt::AlignHCenter | Qt::AlignHCenter, speedUnit);
+
+  p.setFont(InterFont(90, QFont::Bold));
+  p.setPen(set_speed_color);
 
   // current speed
   p.setFont(InterFont(176, QFont::Bold));
@@ -110,8 +145,16 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
   p.setFont(InterFont(66));
   drawText(p, rect().center().x(), 290, speedUnit, 200);
 
+}
+
+  //Adrian Cañadas Gallardo
+
+
+
   p.restore();
 }
+
+
 
 void AnnotatedCameraWidget::drawText(QPainter &p, int x, int y, const QString &text, int alpha) {
   QRect real_rect = p.fontMetrics().boundingRect(text);
