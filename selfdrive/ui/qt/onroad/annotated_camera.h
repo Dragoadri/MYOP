@@ -20,10 +20,13 @@ private:
   ExperimentalButton *experimental_btn;
   QPixmap dm_img;
   float speed;
+  float horizontalAccuracy; //Adrian Cañadas gallardo
+
   QString speedUnit;
   float setSpeed;
   bool is_cruise_set = false;
   bool is_metric = false;
+  bool is_activateEvent = false; //Adrian Cañadas gallardo
   bool dmActive = false;
   bool hideBottomIcons = false;
   bool rightHandDM = false;
