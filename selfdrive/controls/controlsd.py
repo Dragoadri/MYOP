@@ -790,8 +790,8 @@ class Controls:
 
   #Adrian Cañadas Gallardo
   def cosasDeAdri(self):
-    print("Alerta toggle: ",self.is_alerta_SICUEM)
-    #print("Es metrico: ",self.is_metric)
+    #print("Alerta toggle: ",self.is_alerta_SICUEM)
+    #pricotnt("Es metrico: ",self.is_metric)
     pass
 
   #Adrian Cañadas Gallardo
