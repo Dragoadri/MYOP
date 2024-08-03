@@ -15,7 +15,8 @@
 #include <QRect>
 float v_egoo=0;
 float a_egoo=0;
-
+float steeringAngleDeg=0;
+float combustible=0;
 // Window that shows camera view and variety of info drawn on top
 AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* parent) : fps_filter(UI_FREQ, 3, 1. / UI_FREQ), CameraWidget("camerad", type, true, parent) {
   pm = std::make_unique<PubMaster, const std::initializer_list<const char *>>({"uiDebug"});
@@ -56,9 +57,12 @@ void AnnotatedCameraWidget::updateState(const UIState &s) {
   float v_ego = v_ego_cluster_seen ? car_state.getVEgoCluster() : car_state.getVEgo();
   float a_ego = car_state.getAEgo();
 
+
     //Adrian Cañadas Gallardo
     v_egoo = v_ego;
     a_egoo = a_ego;
+    steeringAngleDeg = car_state.getSteeringAngleDeg();
+    combustible = car_state.getFuelGauge();//Devuelve de 0 a 1 asiq ue haremos el porcentaje
 
 
   speed = cs_alive ? std::max<float>(0.0, v_ego) : 0.0;
@@ -136,7 +140,7 @@ QFont valueFont("Inter", 7, QFont::Bold); // Tamaño más pequeño para valores
 
 // Ajustar el rectángulo negro (o fondo) para cada texto
 int rectWidth = 100; // Ajustar el ancho del rectángulo según sea necesario
-int rectHeight = 600; // Ajustar la altura del rectángulo según sea necesario
+int rectHeight = 750; // Ajustar la altura del rectángulo según sea necesario
 
 int xOffset = 100-rectWidth; // Ajusta el margen izquierdo
 //int xIncrement = 100; // Espaciado entre columnas
@@ -220,11 +224,36 @@ p.setFont(valueFont);
 p.setPen(set_speed_color);
 text_rect = set_speed_rect.adjusted(xOffset, yOffset + 9 * yIncrement, 0, 0);
 p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, acelStr + " m/s²");
-}
+
+// Angulo
+p.setFont(labelFont);
+p.setPen(max_color);
+text_rect = set_speed_rect.adjusted(xOffset, yOffset + 10 * yIncrement, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, tr("Angulo"));
+
+p.setFont(valueFont);
+p.setPen(set_speed_color);
+text_rect = set_speed_rect.adjusted(xOffset, yOffset + 11 * yIncrement, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, QString::number(steeringAngleDeg) + " °");
+
+// Combustible
+p.setFont(labelFont);
+p.setPen(max_color);
+text_rect = set_speed_rect.adjusted(xOffset, yOffset + 12 * yIncrement, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, tr("FUEL ⛽"));
+
+p.setFont(valueFont);
+p.setPen(set_speed_color);
+text_rect = set_speed_rect.adjusted(xOffset, yOffset + 13 * yIncrement, 0, 0);
+p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, QString::number(combustible*100) + " %");
+
+
+
+
 
   //Adrian Cañadas Gallardo
 
-
+}
 
   p.restore();
 }
