@@ -17,6 +17,9 @@ float v_egoo=0;
 float a_egoo=0;
 float steeringAngleDeg=0;
 float combustible=0;
+bool LeftBlinker = false;
+bool RightBlinker = false;
+
 // Window that shows camera view and variety of info drawn on top
 AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* parent) : fps_filter(UI_FREQ, 3, 1. / UI_FREQ), CameraWidget("camerad", type, true, parent) {
   pm = std::make_unique<PubMaster, const std::initializer_list<const char *>>({"uiDebug"});
@@ -63,6 +66,8 @@ void AnnotatedCameraWidget::updateState(const UIState &s) {
     a_egoo = a_ego;
     steeringAngleDeg = car_state.getSteeringAngleDeg();
     combustible = car_state.getFuelGauge();//Devuelve de 0 a 1 asiq ue haremos el porcentaje
+    LeftBlinker = car_state.getLeftBlinker();
+    RightBlinker = car_state.getRightBlinker();
 
 
   speed = cs_alive ? std::max<float>(0.0, v_ego) : 0.0;
@@ -175,6 +180,9 @@ QPixmap imagen("../assets/offroad/alerta.png"); // Cambia la ruta a la ubicació
 int imagenAncho = imagen.width();
 int imagenAlto = imagen.height();
 
+//int centerX = width() / 2;
+//int centerY = height() / 2;
+
 // Definir la posición para dibujar la imagen debajo del texto
 QRect imagen_rect = QRect(xOffset+85, yOffset*2+text_rect.height() - 10, imagenAncho/3.25, imagenAlto/3.25); // Ajusta el 10 para el espacio entre el texto y la imagen
 
@@ -253,6 +261,31 @@ p.drawText(text_rect, Qt::AlignHCenter | Qt::AlignVCenter, QString::number(combu
 
   //Adrian Cañadas Gallardo
 
+  // Ajustar el rectángulo negro (o fondo) para cada texto
+int rectWidth2 = 300; // Ajustar el ancho del rectángulo según sea necesario
+int rectHeight2 = 300; // Ajustar la altura del rectángulo según sea necesario
+
+
+
+
+QRect set_speed_rect2(QPoint(1775, 700), QSize(rectWidth2, rectHeight2));
+// Dibujar el rectángulo negrrectHeighto de fondo
+p.setPen(QPen(whiteColor(75), 6));
+p.setBrush(blackColor(166));
+p.drawRoundedRect(set_speed_rect2, 32, 32);
+
+// Configurar fuente y dibujar textos
+p.setFont(labelFont);
+
+
+
+    QPixmap imagen2(LeftBlinker?"./assets/offroad/blinkers_left.png" : RightBlinker?"../assets/offroad/blinkers_rigth.png":"../assets/offroad/blinkers.png"); // Path to your image
+    int imagen2Ancho = imagen2.width();
+    int imagen2Alto = imagen2.height();
+    int image2Width = imagen2Ancho / 3.25;
+    int image2Height = imagen2Alto / 3.25;
+    QRect imagen2_rect(width() - image2Width- 200 / 2, height() - image2Height - 200 / 2, image2Width, image2Height);
+    p.drawPixmap(imagen2_rect, imagen2);
 }
 
   p.restore();
